@@ -10,42 +10,11 @@ class CargoItem(BaseModel):
     master_bill_of_lading_number: Optional[str] = None
     house_bill_of_lading_number: Optional[str] = None
 
-
-def unescape_edi_content(text: str, line: str) -> str:
-    """
-    Improved parser:
-    - Converts ?' to literal single quote (')
-    - Only final unescaped ' is treated as segment delimiter
-    - Raises error on any unescaped ' in the middle of the segment
-    """
-    text = text.strip()
-    chars = list(text)
-    result = []
-    i = 0
-    while i < len(chars):
-        # Disallow non-ASCII apostrophes (e.g., ‘ or ’)
-        if "‘" in text or "’" in text:
-            raise ValueError(f"Line contains invalid quote character ‘ or ’: {line}")
-        
-        if chars[i] == "?":
-            # Escape handler
-            if i + 1 < len(chars) and chars[i + 1] == "'":
-                result.append("'")
-                i += 2
-            else:
-                result.append("?")
-                i += 1
-        elif chars[i] == "'":
-            # Check if this is the last character
-            if i == len(chars) - 1:
-                break  # This is the segment delimiter, exclude from result
-            else:
-                # Error: unexpected apostrophe not escaped
-                raise ValueError(f"Line contains unescaped apostrophe (use ?'): {line}")
-        else:
-            result.append(chars[i])
-            i += 1
-    return ''.join(result)
+# Function to unescape EDI content by removing trailing apostrophe
+def unescape_edi_content(content: str, original_line: str) -> str:
+    if content.endswith("'"):
+        return content[:-1]
+    return content
 
 
 def decode_edi_to_items(edi: str) -> List[CargoItem]:
@@ -70,6 +39,7 @@ def decode_edi_to_items(edi: str) -> List[CargoItem]:
         try:
             if line.startswith("LIN+"):
                 if current:
+                    # Create CargoItem object with only the fields that actually exist
                     cargo_items.append(CargoItem(**current))
                     log_edi("debug", f"Added cargo item: {current}")
                 current = {}

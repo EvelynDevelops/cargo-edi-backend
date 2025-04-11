@@ -32,6 +32,10 @@ memory_handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(m
 edi_logger = logging.getLogger("EDIService")
 edi_logger.addHandler(memory_handler)
 
+# Helper function: Remove all keys with None values from a dictionary
+def remove_none_values(obj: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: v for k, v in obj.items() if v is not None}
+
 @router.post("/decode-edi")
 def decode_edi(payload: dict):
     # Clear previous logs
@@ -45,7 +49,11 @@ def decode_edi(payload: dict):
         items = decode_edi_to_items(edi)
         # Get collected logs
         logs = memory_handler.get_logs()
-        return {"cargo_items": [item.dict() for item in items], "logs": logs}
+        
+        # Remove all None values, keeping only fields that actually exist
+        cleaned_items = [remove_none_values(item.dict()) for item in items]
+        
+        return {"cargo_items": cleaned_items, "logs": logs}
     except Exception as e:
         log_edi("error", f"EDI decoding failed: {str(e)}")
         # Get collected logs
