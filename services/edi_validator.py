@@ -65,7 +65,7 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
         
         # Validate LIN
         if not lines[i].startswith(f"LIN+{cargo_index}+I"):
-            errors.append(f"Line {line_num}: Invalid line format. Expected Line Identifier (LIN+{cargo_index}+I'). Each cargo item must start with the correct sequence number.")
+            errors.append(f"Line {line_num}: Invalid line format. Expected Line Identifier (LIN+{cargo_index}+I'). ")
         else:
             log_edi("debug", f"Validated LIN for cargo index {cargo_index}")
         i += 1
