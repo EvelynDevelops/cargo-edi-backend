@@ -11,6 +11,8 @@ SPECIAL_CHARS_PATTERN = re.compile(r'[^a-zA-Z0-9]')
 CARGO_NAME_PATTERN = re.compile(r"^[A-Z][A-Za-z0-9\s\-]*$")
 # Valid cargo types
 VALID_CARGO_TYPES = ['FCX', 'LCL', 'FCL']
+# Add valid RFF types
+VALID_RFF_TYPES = ['RFF+AAQ:', 'RFF+MB:', 'RFF+BH:']
 
 def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
     """
@@ -38,17 +40,13 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
     """
     errors = []
     
-    # Split EDI into lines and keep empty lines for line number tracking
-    lines = edi.splitlines()
+    # Check for empty lines using a more strict regex pattern
+    if EMPTY_LINE_PATTERN.search(edi):
+        errors.append("Empty lines are not allowed between EDI segments")
+        log_edi("error", "Found empty lines in EDI message")
     
-    # Check for empty lines
-    for i, line in enumerate(lines, 1):
-        if not line.strip():
-            errors.append(f"Line {i}: Empty line is not allowed between EDI segments")
-            log_edi("error", f"Found empty line at line {i}")
-    
-    # Remove empty lines for further processing
-    lines = [line.strip() for line in lines if line.strip()]
+    # Process lines once and store them
+    lines = [line.strip() for line in edi.strip().splitlines() if line.strip()]
     line_count = len(lines)
 
     log_edi("info", "Starting EDI message validation")
@@ -115,9 +113,19 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
             line = lines[i]
             line_num = i + 1
             
-            if not (line.startswith("RFF+AAQ:") or line.startswith("RFF+MB:") or line.startswith("RFF+BH:")):
-                errors.append(f"Line {line_num}: Expected RFF+AAQ/MB/BH after PCI+1'")
-                break
+            # Validate RFF format first
+            if line.startswith("RFF+"):
+                # Check if the RFF prefix matches any valid type
+                valid_prefix = False
+                for valid_type in VALID_RFF_TYPES:
+                    if line.startswith(valid_type):
+                        valid_prefix = True
+                        break
+                
+                if not valid_prefix:
+                    errors.append(f"Line {line_num}: Invalid RFF format - must be one of: {', '.join(VALID_RFF_TYPES)} (found '{line.split(':')[0]}:')")
+                    i += 1
+                    continue
 
             # Extract RFF content for validation
             rff_content = line.split(":", 1)[1]
