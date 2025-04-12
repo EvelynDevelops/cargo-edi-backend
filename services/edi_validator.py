@@ -7,6 +7,10 @@ EMPTY_LINE_PATTERN = re.compile(r'\n\s*\n')
 PAC_PATTERN = re.compile(r"PAC\+(\d+)\+1'")
 ALPHANUMERIC_PATTERN = re.compile(r"^[a-zA-Z0-9]+$")
 SPECIAL_CHARS_PATTERN = re.compile(r'[^a-zA-Z0-9]')
+# Pattern for valid cargo name: uppercase or sentence case letters, spaces, hyphens, and optional numbers
+CARGO_NAME_PATTERN = re.compile(r"^[A-Z][A-Za-z0-9\s\-]*$")
+# Valid cargo types
+VALID_CARGO_TYPES = ['FCX', 'LCL', 'FCL']
 
 def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
     """
@@ -22,6 +26,8 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
     7. No empty lines are allowed between EDI segments.
     8. PAC+{number}+1' number must be a positive integer (1 or greater) without any symbols.
     9. Each line must end with a single quote (').
+    10. Cargo type must be one of: FCX, LCL, FCL.
+    11. RFF fields should handle multiple quotes correctly, with only the last quote being the terminator.
     
 
     Args:
@@ -57,7 +63,7 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
         
         # Validate LIN
         if not lines[i].startswith(f"LIN+{cargo_index}+I"):
-            errors.append(f"Line {line_num}: Expected LIN+{cargo_index}+I'")
+            errors.append(f"Line {line_num}: Invalid line format. Expected Line Identifier (LIN+{cargo_index}+I'). Each cargo item must start with the correct sequence number.")
         else:
             log_edi("debug", f"Validated LIN for cargo index {cargo_index}")
         i += 1
@@ -66,7 +72,13 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
         if i >= line_count or not lines[i].startswith("PAC+++"):
             errors.append(f"Line {i+1}: Expected PAC+++<cargo_type>:67:95'")
         else:
-            log_edi("debug", f"Validated PAC+++ line: {lines[i]}")
+            # Extract and validate cargo type
+            cargo_type = lines[i].split("+++", 1)[1].split(":")[0]
+            if cargo_type not in VALID_CARGO_TYPES:
+                errors.append(f"Line {i+1}: Invalid cargo type '{cargo_type}'. Must be one of: {', '.join(VALID_CARGO_TYPES)}")
+                log_edi("error", f"Invalid cargo type: {cargo_type}")
+            else:
+                log_edi("debug", f"Validated PAC+++ line with cargo type: {cargo_type}")
         i += 1
 
         # Validate PAC+<number>+1'
@@ -78,12 +90,12 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
             if pac_match:
                 number = int(pac_match.group(1))
                 if number < 1:
-                    errors.append(f"Line {i+1}: PAC+ number must be 1 or greater")
+                    errors.append(f"Line {i+1}: The number of packages in PAC+ must be at least 1")
                 else:
                     log_edi("debug", f"Validated PAC+ line: {lines[i]}")
             else:
                 # If regex doesn't match, format is incorrect
-                errors.append(f"Line {i+1}: PAC+ number must be a positive integer without any symbols")
+                errors.append(f"Line {i+1}:The number of packages in PAC+ must be a whole number (no letters or symbols)")
                 log_edi("debug", f"Invalid PAC+ format: {lines[i]}")
         i += 1
 
@@ -98,7 +110,11 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
                 
                 if line.startswith("RFF+AAQ:"):
                     # Validate RFF+AAQ: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1].rstrip("'")
+                    rff_content = line.split(":", 1)[1]
+                    # Remove only the last quote as it's the terminator
+                    if rff_content.endswith("'"):
+                        rff_content = rff_content[:-1]
+                    
                     if not rff_content:
                         errors.append(f"Line {line_num}: RFF+AAQ: value cannot be empty")
                     else:
@@ -113,7 +129,11 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
                     optional_count += 1
                 elif line.startswith("RFF+MB:"):
                     # Validate RFF+MB: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1].rstrip("'")
+                    rff_content = line.split(":", 1)[1]
+                    # Remove only the last quote as it's the terminator
+                    if rff_content.endswith("'"):
+                        rff_content = rff_content[:-1]
+                    
                     if not rff_content:
                         errors.append(f"Line {line_num}: RFF+MB: value cannot be empty")
                     else:
@@ -128,7 +148,11 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
                     optional_count += 1
                 elif line.startswith("RFF+BH:"):
                     # Validate RFF+BH: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1].rstrip("'")
+                    rff_content = line.split(":", 1)[1]
+                    # Remove only the last quote as it's the terminator
+                    if rff_content.endswith("'"):
+                        rff_content = rff_content[:-1]
+                    
                     if not rff_content:
                         errors.append(f"Line {line_num}: RFF+BH: value cannot be empty")
                     else:
