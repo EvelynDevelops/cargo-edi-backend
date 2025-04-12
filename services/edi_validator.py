@@ -104,71 +104,35 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
         while i < line_count and lines[i].startswith("PCI+1"):
             log_edi("debug", f"Found PCI at line {i+1}")
             i += 1
-            if i < line_count:
-                line = lines[i]
-                line_num = i + 1
+            if i >= line_count:
+                errors.append(f"Line {i}: Expected RFF+AAQ/MB/BH after PCI+1'")
+                break
                 
-                if line.startswith("RFF+AAQ:"):
-                    # Validate RFF+AAQ: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1]
-                    # Remove only the last quote as it's the terminator
-                    if rff_content.endswith("'"):
-                        rff_content = rff_content[:-1]
-                    
-                    if not rff_content:
-                        errors.append(f"Line {line_num}: RFF+AAQ: value cannot be empty")
-                    else:
-                        # Check for special characters and provide detailed error
-                        special_chars = SPECIAL_CHARS_PATTERN.findall(rff_content)
-                        if special_chars:
-                            unique_chars = list(set(special_chars))
-                            errors.append(f"Line {line_num}: RFF+AAQ: value contains invalid characters: {', '.join(unique_chars)}. Only letters and numbers are allowed.")
-                        else:
-                            log_edi("debug", f"Found RFF+AAQ at line {line_num}")
-                    i += 1
-                    optional_count += 1
-                elif line.startswith("RFF+MB:"):
-                    # Validate RFF+MB: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1]
-                    # Remove only the last quote as it's the terminator
-                    if rff_content.endswith("'"):
-                        rff_content = rff_content[:-1]
-                    
-                    if not rff_content:
-                        errors.append(f"Line {line_num}: RFF+MB: value cannot be empty")
-                    else:
-                        # Check for special characters and provide detailed error
-                        special_chars = SPECIAL_CHARS_PATTERN.findall(rff_content)
-                        if special_chars:
-                            unique_chars = list(set(special_chars))
-                            errors.append(f"Line {line_num}: RFF+MB: value contains invalid characters: {', '.join(unique_chars)}. Only letters and numbers are allowed.")
-                        else:
-                            log_edi("debug", f"Found RFF+MB at line {line_num}")
-                    i += 1
-                    optional_count += 1
-                elif line.startswith("RFF+BH:"):
-                    # Validate RFF+BH: value contains only letters and numbers
-                    rff_content = line.split(":", 1)[1]
-                    # Remove only the last quote as it's the terminator
-                    if rff_content.endswith("'"):
-                        rff_content = rff_content[:-1]
-                    
-                    if not rff_content:
-                        errors.append(f"Line {line_num}: RFF+BH: value cannot be empty")
-                    else:
-                        # Check for special characters and provide detailed error
-                        special_chars = SPECIAL_CHARS_PATTERN.findall(rff_content)
-                        if special_chars:
-                            unique_chars = list(set(special_chars))
-                            errors.append(f"Line {line_num}: RFF+BH: value contains invalid characters: {', '.join(unique_chars)}. Only letters and numbers are allowed.")
-                        else:
-                            log_edi("debug", f"Found RFF+BH at line {line_num}")
-                    i += 1
-                    optional_count += 1
-                else:
-                    errors.append(f"Line {line_num}: Expected RFF+AAQ/MB/BH after PCI+1'")
+            line = lines[i]
+            line_num = i + 1
+            
+            if not (line.startswith("RFF+AAQ:") or line.startswith("RFF+MB:") or line.startswith("RFF+BH:")):
+                errors.append(f"Line {line_num}: Expected RFF+AAQ/MB/BH after PCI+1'")
+                break
+
+            # Extract RFF content for validation
+            rff_content = line.split(":", 1)[1]
+            if rff_content.endswith("'"):
+                rff_content = rff_content[:-1]
+            
+            if not rff_content:
+                errors.append(f"Line {line_num}: RFF value cannot be empty")
             else:
-                errors.append(f"Line {i}: Unexpected end after PCI+1'")
+                # Check for special characters and provide detailed error
+                special_chars = set(char for char in rff_content if not char.isalnum())
+                if special_chars:
+                    unique_chars = sorted(special_chars)
+                    errors.append(f"Line {line_num}: RFF value contains invalid characters: {', '.join(unique_chars)}. Only letters and numbers are allowed.")
+                    log_edi("error", f"Found invalid characters in RFF value: {unique_chars}")
+                else:
+                    log_edi("debug", f"Found valid RFF at line {line_num}")
+            i += 1
+            optional_count += 1
 
         if optional_count == 0:
             log_edi("debug", f"No optional fields for cargo index {cargo_index}")
