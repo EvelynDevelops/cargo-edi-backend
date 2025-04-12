@@ -38,13 +38,17 @@ def validate_edi_message(edi: str) -> Tuple[bool, List[str]]:
     """
     errors = []
     
-    # Check for empty lines using a more strict regex pattern
-    if EMPTY_LINE_PATTERN.search(edi):
-        errors.append("Empty lines are not allowed between EDI segments")
-        log_edi("error", "Found empty lines in EDI message")
+    # Split EDI into lines and keep empty lines for line number tracking
+    lines = edi.splitlines()
     
-    # Process lines once and store them
-    lines = [line.strip() for line in edi.strip().splitlines() if line.strip()]
+    # Check for empty lines
+    for i, line in enumerate(lines, 1):
+        if not line.strip():
+            errors.append(f"Line {i}: Empty line is not allowed between EDI segments")
+            log_edi("error", f"Found empty line at line {i}")
+    
+    # Remove empty lines for further processing
+    lines = [line.strip() for line in lines if line.strip()]
     line_count = len(lines)
 
     log_edi("info", "Starting EDI message validation")
