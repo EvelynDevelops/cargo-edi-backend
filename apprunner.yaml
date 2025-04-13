@@ -3,9 +3,12 @@ runtime: python3
 build:
   commands:
     pre-build:
+      - python -V
       - pip install --upgrade pip
+      - pip -V
     build:
-      - pip install -r requirements.txt
+      - pip install -r requirements.txt --no-cache-dir
+      - python -c "import fastapi; print(f'FastAPI version: {fastapi.__version__}')"
 
 run:
   runtime-version: 3.8
