@@ -17,9 +17,3 @@ run:
       value: "1"
     - name: PYTHONDONTWRITEBYTECODE
       value: "1"
-  health-check:
-    path: "/api/v1/health"
-    interval: 10
-    timeout: 5
-    healthy-threshold: 2
-    unhealthy-threshold: 3
