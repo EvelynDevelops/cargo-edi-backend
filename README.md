@@ -20,6 +20,7 @@ A FastAPI-based backend service for generating and decoding EDI (Electronic Data
    uvicorn main:app --reload
    ```
    The API will be available at `http://localhost:8000`
+   The API documentation at: Swagger UI: `http://localhost:8000/docs`
 
 ## System Requirements
 
