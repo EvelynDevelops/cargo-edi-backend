@@ -41,23 +41,6 @@ A FastAPI-based backend service for generating and decoding EDI (Electronic Data
 pytest
 ```
 
-### Code Style
-```bash
-# Install development dependencies
-pip install black flake8
-
-# Format code
-black .
-
-# Lint code
-flake8
-```
-
-## API Documentation
-
-Once the server is running, you can access:
-- Swagger UI documentation: `http://localhost:8000/docs`
-
 ## Possible Improvements
 
 ### Testing
@@ -68,10 +51,5 @@ Once the server is running, you can access:
 - Add support for more EDI message types
 - Add message validation against EDI standards
 
-### Security
-- Add authentication and authorization
-- Add API key management
-
 ### Performance
-- Add caching layer for EDI processing
 - Optimize EDI message parsing
