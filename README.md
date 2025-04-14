@@ -26,24 +26,6 @@ A FastAPI-based backend service for generating and decoding EDI (Electronic Data
 - Python 3.8 or later
 - pip (Python package manager)
 
-## Project Structure
-
-```
-cargo-edi-backend/
-├── api/             # API routes and endpoints
-├── services/        # Business logic services
-├── funcs/           # Utility functions
-├── tests/           # Test files
-└── main.py         # Application entry point
-```
-
-## Features
-
-- RESTful API for EDI message generation and decoding
-- Input validation using Pydantic models
-- Comprehensive error handling
-- Logging system for debugging and monitoring
-- CORS support for frontend integration
 
 ## Key Dependencies
 
